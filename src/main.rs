@@ -7,6 +7,7 @@ fn main() {
 
 	const TIME_STEP: u32 = 11025;
 	let mut time = 0;
+	let mut first = true;
 	let mut field: [ [u16; 8] ; 8 ] = [ [0; 8] ; 8 ];
 
 	// place a glider on the field
@@ -21,6 +22,8 @@ fn main() {
 
 		let old_field = field;
 
+		let mut writer = out_port.writer(scope);
+		
 		for foo in in_port.iter(scope) {
 			if foo.bytes.len() == 3 && foo.bytes[0] == 0x90 && foo.bytes[2] != 0 {
 				let id = foo.bytes[1];
@@ -28,6 +31,13 @@ fn main() {
 				let y = (id as usize / 10) - 1;
 
 				field[x][y] = if field[x][y] == 0 { 1 } else { 0 };
+			}
+		
+			if first {
+				// switch launchpad into programmer mode
+				println!("switching to programmer mode");
+				writer.write(&jack::RawMidi { time: 0, bytes: &[0xF0, 0x00, 0x20, 0x29, 0x02, 0x0C, 0x0E, 0x01, 0xF7] }).unwrap();
+				first = false;
 			}
 		}
 
@@ -63,7 +73,7 @@ fn main() {
 			
 		}
 			
-		let mut writer = out_port.writer(scope);
+
 
 		for x1 in 0..8 {
 			for y1 in 0..8 {

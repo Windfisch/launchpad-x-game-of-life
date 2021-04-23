@@ -14,6 +14,9 @@ Put the LaunchPad X into Programmer mode by long-pressing
 "Session", then pressing the red "Record Arm" button.
 Leave the menu by pressing "Session" again.
 
+Alternatively, programmer mode is activated when any
+button is pressed on the launchpad.
+
 User input
 ----------
 
