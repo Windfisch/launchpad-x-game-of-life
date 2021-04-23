@@ -31,7 +31,7 @@ fn main() {
 			}
 		}
 
-		const AGE_DIV: u16 = 10;
+		const AGE_DIV: u16 = 1;
 
 		let mut new_field = field;
 		if time >= TIME_STEP {
@@ -46,18 +46,18 @@ fn main() {
 
 					let neighbors : Vec<_> = [(x0,y0), (x0,y1), (x0,y2), (x1,y0), (x1,y2), (x2,y0), (x2,y1), (x2,y2)].iter().filter_map(|(x,y)| if field[*x][*y] != 0 { Some(field[*x][*y]) } else { None } ).collect();
 					let n_neighbors = neighbors.len() as u16;
-					let mut age = if n_neighbors > 0 { neighbors.iter().sum::<u16>() / n_neighbors + 1 } else { 0 };
-					if age > 7*AGE_DIV { age = 7 * AGE_DIV; }
 
 					if field[x1][y1] != 0 && (n_neighbors == 2 || n_neighbors == 3) {
-						new_field[x1][y1] = age;
+						new_field[x1][y1] += 1;
 					}
 					else if field[x1][y1] == 0 && n_neighbors == 3 {
-						new_field[x1][y1] = age;
+						new_field[x1][y1] += 1;
 					}
 					else {
 						new_field[x1][y1] = 0;
 					}
+
+					if new_field[x1][y1] >= 7*AGE_DIV { new_field[x1][y1] = 7*AGE_DIV }
 				}
 			}
 			
