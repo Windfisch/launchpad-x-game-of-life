@@ -7,12 +7,15 @@ fn main() {
 
 	const TIME_STEP: u32 = 11025;
 	let mut time = 0;
-	let mut field: [ [bool; 8] ; 8 ] = [ [false; 8] ; 8 ];
-	field[3][3] = true;
-	field[4][4] = true;
-	field[2][5] = true;
-	field[3][5] = true;
-	field[4][5] = true;
+	let mut field: [ [u16; 8] ; 8 ] = [ [0; 8] ; 8 ];
+
+	// place a glider on the field
+	field[3][3] = 1;
+	field[4][4] = 1;
+	field[2][5] = 1;
+	field[3][5] = 1;
+	field[4][5] = 1;
+
 	let _async_client = client.activate_async((), jack::ClosureProcessHandler::new(move |_client: &jack::Client, scope: &jack::ProcessScope| -> jack::Control {
 		time += scope.n_frames();
 
@@ -24,9 +27,11 @@ fn main() {
 				let x = (id as usize % 10) - 1;
 				let y = (id as usize / 10) - 1;
 
-				field[x][y] = !field[x][y];
+				field[x][y] = if field[x][y] == 0 { 1 } else { 0 };
 			}
 		}
+
+		const AGE_DIV: u16 = 10;
 
 		let mut new_field = field;
 		if time >= TIME_STEP {
@@ -39,15 +44,19 @@ fn main() {
 					let y0 = (y1 + 7) % 8;
 					let y2 = (y1 + 1) % 8;
 
-					let neighbors = [(x0,y0), (x0,y1), (x0,y2), (x1,y0), (x1,y2), (x2,y0), (x2,y1), (x2,y2)].iter().filter(|(x,y)| field[*x][*y]).count();
-					if field[x1][y1] && (neighbors == 2 || neighbors == 3) {
-						new_field[x1][y1] = true;
+					let neighbors : Vec<_> = [(x0,y0), (x0,y1), (x0,y2), (x1,y0), (x1,y2), (x2,y0), (x2,y1), (x2,y2)].iter().filter_map(|(x,y)| if field[*x][*y] != 0 { Some(field[*x][*y]) } else { None } ).collect();
+					let n_neighbors = neighbors.len() as u16;
+					let mut age = if n_neighbors > 0 { neighbors.iter().sum::<u16>() / n_neighbors + 1 } else { 0 };
+					if age > 7*AGE_DIV { age = 7 * AGE_DIV; }
+
+					if field[x1][y1] != 0 && (n_neighbors == 2 || n_neighbors == 3) {
+						new_field[x1][y1] = age;
 					}
-					else if !field[x1][y1] && neighbors == 3 {
-						new_field[x1][y1] = true;
+					else if field[x1][y1] == 0 && n_neighbors == 3 {
+						new_field[x1][y1] = age;
 					}
 					else {
-						new_field[x1][y1] = false;
+						new_field[x1][y1] = 0;
 					}
 				}
 			}
@@ -59,7 +68,8 @@ fn main() {
 		for x1 in 0..8 {
 			for y1 in 0..8 {
 				if old_field[x1][y1] != new_field[x1][y1] {
-					writer.write(&jack::RawMidi { time: 0, bytes: &[0x90, (x1 as u8+1) + (y1 as u8+1)*10, if new_field[x1][y1] { 64 } else { 0 }] }).unwrap();
+					let color = if new_field[x1][y1] != 0 { (new_field[x1][y1] / AGE_DIV)*8+1 } else { 0 };
+					writer.write(&jack::RawMidi { time: 0, bytes: &[0x90, (x1 as u8+1) + (y1 as u8+1)*10, color as u8] }).unwrap();
 				}
 			}
 		}
